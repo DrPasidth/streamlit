@@ -1,0 +1,44 @@
+how to install streamlit on windows:
+1. Install python using these command:
+1.1 Access to web browser
+1.2 Goto python download page : https://www.python.org/downloads/windows/
+1.3 Click appropriate download link for your system (32 bits or 64 bits)
+1.4 Follow the instruction for installation
+1.5 In optional features, tick pip (or tick all option)
+1.6 In advance options, tick Add python to environment variables
+1.7 if complete installation check with command prompt
+1.8 Open command prompt (Press window key + r
+1.9 In command prompt
+    C:\Users\[User Name]>pip --version
+
+1.10 if shows version, then the installation is completed
+
+2. Install streamlit
+2.1 Use in command propmt
+  C:\Users\[User Name]>pip install streamlit
+2.2 After completed, continue in command prompt
+  C:\Users\[User Name]>streamlit hello
+     Welcome to Streamlit
+        If you’d like to receive helpful onboarding emails, news, offers, promotions,
+        and the occasional swag, please enter your email address below. Otherwise,
+        leave this field blank.
+        Email:  [key your email]
+  You can find our privacy policy at https://streamlit.io/privacy-policy
+  Summary:
+  - This open source library collects usage statistics.
+  - We cannot see and do not store information contained inside Streamlit apps,
+    such as text, charts, images, etc.
+
+  Welcome to Streamlit. Check out our demo in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.1.31:8501
+
+  Ready to create your own Python apps super quickly?
+  Head over to https://docs.streamlit.io
+
+  May you create awesome apps!
+2.3 The browser will be opened useing URL: localhost:8501
+  On page will show Welcome to Streamlit page.
+
+  
