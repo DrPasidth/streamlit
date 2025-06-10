@@ -1,0 +1,22 @@
+How to install additional module for application: moto_health7.py
+1. open command prompt and install: 
+    pip install numpy
+    pip install pandas
+    pip install scipy
+    pip install scikit-learn
+    pip install mysql-connector-python-9.3.0
+2. check modules:
+   pip list
+   list of modules display
+3. activate environment
+  D:\AI-IOT\.venv\Scripts\activate
+4. Run streamlit
+  (env)D:\AI-IOT>streamlit run motor_healyh7.py
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.1.31:8501
+
+5. Done.
+
