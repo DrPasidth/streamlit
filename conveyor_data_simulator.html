@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conveyor Belt Data Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .panel h2 {
+            margin-bottom: 20px;
+            color: #87CEEB;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .sensor-card {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .sensor-label {
+            font-size: 0.9rem;
+            color: #B0BEC5;
+            margin-bottom: 5px;
+        }
+        
+        .sensor-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+        
+        .sensor-unit {
+            font-size: 0.8rem;
+            color: #90A4AE;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #B0BEC5;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .scenario-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #FF9800;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #F44336;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .transmission-log {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            border-left: 4px solid #4CAF50;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .log-entry.error {
+            border-left-color: #F44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .log-entry.warning {
+            border-left-color: #FF9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        
+        .timestamp {
+            color: #90A4AE;
+            margin-right: 10px;
+        }
+        
+        .endpoint-config {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .endpoint-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .main-controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .main-controls .btn {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            margin: 0 10px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #B0BEC5;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏭 Conveyor Belt Data Simulator</h1>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span id="connectionStatus">Connected to n8n Webhook</span>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <!-- Left Panel - Current Sensor Data -->
+            <div class="panel">
+                <h2>📊 Current Sensor Readings</h2>
+                
+                <div class="sensor-grid">
+                    <div class="sensor-card">
+                        <div class="sensor-label">Belt Speed</div>
+                        <div class="sensor-value" id="speedDisplay">45</div>
+                        <div class="sensor-unit">m/min</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <div class="sensor-label">Motor Temperature</div>
+                        <div class="sensor-value" id="tempDisplay">65</div>
+                        <div class="sensor-unit">°C</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <div class="sensor-label">Vibration Level</div>
+                        <div class="sensor-value" id="vibrationDisplay">3.2</div>
+                        <div class="sensor-unit">Hz</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <div class="sensor-label">Hourly Throughput</div>
+                        <div class="sensor-value" id="throughputDisplay">950</div>
+                        <div class="sensor-unit">units/hr</div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="speedSlider">Speed Control</label>
+                        <input type="range" id="speedSlider" class="slider" min="20" max="60" value="45">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="tempSlider">Temperature</label>
+                        <input type="range" id="tempSlider" class="slider" min="40" max="90" value="65">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="vibrationSlider">Vibration</label>
+                        <input type="range" id="vibrationSlider" class="slider" min="1" max="10" value="3.2" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="scenario-buttons">
+                    <button class="btn btn-primary" onclick="setOptimalConditions()">Optimal Operation</button>
+                    <button class="btn btn-warning" onclick="setOverheatingScenario()">Overheating Alert</button>
+                    <button class="btn btn-danger" onclick="setVibrationIssue()">Vibration Problem</button>
+                    <button class="btn btn-info" onclick="setLowThroughput()">Low Throughput</button>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="transmissionCount">0</div>
+                        <div class="stat-label">Data Sent</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-value" id="successCount">0</div>
+                        <div class="stat-label">Success</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-value" id="errorCount">0</div>
+                        <div class="stat-label">Errors</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-value" id="uptime">0m</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Panel - Transmission Control -->
+            <div class="panel">
+                <h2>📡 Data Transmission Control</h2>
+                
+                <div class="endpoint-config">
+                    <label for="webhookUrl" style="display: block; margin-bottom: 8px; color: #B0BEC5;">n8n Webhook URL:</label>
+                    <input type="text" id="webhookUrl" class="endpoint-input" 
+                            placeholder="http://localhost:5678/webhook/conveyor-data" 
+                            value="http://localhost:5678/webhook/conveyor-data">
+                </div>
+                
+                <div class="main-controls">
+                    <button class="btn btn-primary" id="startBtn" onclick="startTransmission()">Start Auto Transmission</button>
+                    <button class="btn btn-warning" id="stopBtn" onclick="stopTransmission()" style="display: none;">Stop Transmission</button>
+                    <button class="btn btn-info" onclick="sendSingleData()">Send Single Data</button>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #B0BEC5;">Transmission Interval:</label>
+                    <select id="intervalSelect" style="margin-left: 10px; padding: 5px; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                        <option value="5000">5 seconds</option>
+                        <option value="15000" selected>15 seconds</option>
+                        <option value="30000">30 seconds</option>
+                        <option value="60000">1 minute</option>
+                    </select>
+                </div>
+                
+                <h3 style="margin-bottom: 10px; color: #87CEEB;">📋 Transmission Log</h3>
+                <div class="transmission-log" id="transmissionLog">
+                    <div class="log-entry">
+                        <span class="timestamp">Ready</span>
+                        System initialized and ready to transmit data
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ConveyorDataSimulator {
+            constructor() {
+                this.isTransmitting = false;
+                this.transmissionInterval = null;
+                this.transmissionCount = 0;
+                this.successCount = 0;
+                this.errorCount = 0;
+                this.startTime = Date.now();
+                
+                // Current sensor values
+                this.currentSpeed = 45;
+                this.currentTemp = 65;
+                this.currentVibration = 3.2;
+                this.currentThroughput = 950;
+                
+                this.initializeEventListeners();
+                this.updateDisplay();
+                this.startUptimeTimer();
+            }
+            
+            initializeEventListeners() {
+                // Slider event listeners
+                document.getElementById('speedSlider').addEventListener('input', (e) => {
+                    this.currentSpeed = parseFloat(e.target.value);
+                    this.updateDisplay();
+                });
+                
+                document.getElementById('tempSlider').addEventListener('input', (e) => {
+                    this.currentTemp = parseFloat(e.target.value);
+                    this.updateDisplay();
+                });
+                
+                document.getElementById('vibrationSlider').addEventListener('input', (e) => {
+                    this.currentVibration = parseFloat(e.target.value);
+                    this.updateDisplay();
+                });
+            }
+            
+            updateDisplay() {
+                document.getElementById('speedDisplay').textContent = this.currentSpeed.toFixed(0);
+                document.getElementById('tempDisplay').textContent = this.currentTemp.toFixed(1);
+                document.getElementById('vibrationDisplay').textContent = this.currentVibration.toFixed(1);
+                
+                // Calculate throughput based on speed
+                this.currentThroughput = Math.round(this.currentSpeed * 21 + Math.random() * 100 - 50);
+                document.getElementById('throughputDisplay').textContent = this.currentThroughput;
+                
+                // Update slider values
+                document.getElementById('speedSlider').value = this.currentSpeed;
+                document.getElementById('tempSlider').value = this.currentTemp;
+                document.getElementById('vibrationSlider').value = this.currentVibration;
+            }
+            
+            generateSensorData() {
+                // Add realistic fluctuations to sensor data
+                const fluctuation = () => (Math.random() - 0.5) * 2;
+                
+                return {
+                    equipmentId: "CONVEYOR-BELT-01",
+                    timestamp: new Date().toISOString(),
+                    currentSpeed: Math.max(0, this.currentSpeed + fluctuation()),
+                    motorTemp: Math.max(20, this.currentTemp + fluctuation()),
+                    vibrationLevel: Math.max(0, this.currentVibration + fluctuation() * 0.3),
+                    hourlyThroughput: Math.max(0, this.currentThroughput + Math.round(fluctuation() * 50)),
+                    status: "operational",
+                    location: "Production Line A",
+                    shiftId: this.getCurrentShift(),
+                    metadata: {
+                        sensorVersion: "v2.1.3",
+                        calibrationDate: "2025-06-01",
+                        maintenanceStatus: "good"
+                    }
+                };
+            }
+            
+            getCurrentShift() {
+                const hour = new Date().getHours();
+                if (hour >= 6 && hour < 14) return "day_shift";
+                if (hour >= 14 && hour < 22) return "evening_shift";
+                return "night_shift";
+            }
+            
+            async sendData() {
+                const data = this.generateSensorData();
+                const url = document.getElementById('webhookUrl').value;
+                
+                if (!url) {
+                    this.logTransmission('ERROR: No webhook URL configured', 'error');
+                    return;
+                }
+                
+                try {
+                    this.transmissionCount++;
+                    this.logTransmission(`Sending data packet #${this.transmissionCount}...`);
+                    
+                    // Simulate API call (replace with actual fetch to your n8n webhook)
+                    const response = await this.simulateAPICall(url, data);
+                    
+                    if (response.success) {
+                        this.successCount++;
+                        this.logTransmission(`✅ Data sent successfully - Speed: ${data.currentSpeed.toFixed(1)}m/min, Temp: ${data.motorTemp.toFixed(1)}°C`);
+                    } else {
+                        throw new Error(response.error || 'Unknown error');
+                    }
+                    
+                } catch (error) {
+                    this.errorCount++;
+                    this.logTransmission(`❌ Transmission failed: ${error.message}`, 'error');
+                }
+                
+                this.updateStats();
+            }
+            
+            async simulateAPICall(url, data) {
+                // Simulate network delay
+                try {
+                    // Make actual HTTP request to n8n webhook
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    return { success: true, data: result };
+                    
+                } catch (error) {
+                    console.error('Request failed:', error);
+                    throw error;
+                }
+            }
+                        
+            logTransmission(message, type = 'info') {
+                const log = document.getElementById('transmissionLog');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                entry.innerHTML = `<span class="timestamp">${timestamp}</span>${message}`;
+                
+                log.insertBefore(entry, log.firstChild);
+                
+                // Keep only last 20 entries
+                while (log.children.length > 20) {
+                    log.removeChild(log.lastChild);
+                }
+            }
+            
+            updateStats() {
+                document.getElementById('transmissionCount').textContent = this.transmissionCount;
+                document.getElementById('successCount').textContent = this.successCount;
+                document.getElementById('errorCount').textContent = this.errorCount;
+            }
+            
+            startUptimeTimer() {
+                setInterval(() => {
+                    const uptimeMs = Date.now() - this.startTime;
+                    const uptimeMin = Math.floor(uptimeMs / 60000);
+                    document.getElementById('uptime').textContent = `${uptimeMin}m`;
+                }, 1000);
+            }
+            
+            // Scenario methods
+            setOptimalConditions() {
+                this.currentSpeed = 45;
+                this.currentTemp = 65;
+                this.currentVibration = 3.0;
+                this.updateDisplay();
+                this.logTransmission('Scenario: Optimal operating conditions set');
+            }
+            
+            setOverheatingScenario() {
+                this.currentSpeed = 55;
+                this.currentTemp = 78;
+                this.currentVibration = 4.2;
+                this.updateDisplay();
+                this.logTransmission('Scenario: Overheating condition simulated', 'warning');
+            }
+            
+            setVibrationIssue() {
+                this.currentSpeed = 50;
+                this.currentTemp = 70;
+                this.currentVibration = 7.5;
+                this.updateDisplay();
+                this.logTransmission('Scenario: High vibration issue simulated', 'warning');
+            }
+            
+            setLowThroughput() {
+                this.currentSpeed = 30;
+                this.currentTemp = 55;
+                this.currentVibration = 2.8;
+                this.updateDisplay();
+                this.logTransmission('Scenario: Low throughput condition set');
+            }
+        }
+        
+        // Global instance
+        let simulator;
+        
+        // Global functions for buttons
+        function startTransmission() {
+            const interval = parseInt(document.getElementById('intervalSelect').value);
+            
+            simulator.isTransmitting = true;
+            simulator.transmissionInterval = setInterval(() => {
+                simulator.sendData();
+            }, interval);
+            
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
+            document.getElementById('connectionStatus').textContent = 'Transmitting Data';
+            
+            simulator.logTransmission(`🚀 Auto transmission started (${interval/1000}s intervals)`);
+        }
+        
+        function stopTransmission() {
+            if (simulator.transmissionInterval) {
+                clearInterval(simulator.transmissionInterval);
+                simulator.transmissionInterval = null;
+            }
+            
+            simulator.isTransmitting = false;
+            document.getElementById('startBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'none';
+            document.getElementById('connectionStatus').textContent = 'Connected to n8n Webhook';
+            
+            simulator.logTransmission('⏹️ Auto transmission stopped');
+        }
+        
+        function sendSingleData() {
+            simulator.sendData();
+        }
+        
+        function setOptimalConditions() {
+            simulator.setOptimalConditions();
+        }
+        
+        function setOverheatingScenario() {
+            simulator.setOverheatingScenario();
+        }
+        
+        function setVibrationIssue() {
+            simulator.setVibrationIssue();
+        }
+        
+        function setLowThroughput() {
+            simulator.setLowThroughput();
+        }
+        
+        // Initialize when page loads
+        window.onload = function() {
+            simulator = new ConveyorDataSimulator();
+        };
+    </script>
+</body>
+</html>
