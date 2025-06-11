@@ -1,0 +1,290 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Simple AI logic to analyze conveyor performance\nconst data = $input.first().json;\n\n// Current readings\nconst speed = data.currentSpeed; // m/min\nconst temperature = data.motorTemp; // Celsius\nconst vibration = data.vibrationLevel; // Hz\nconst throughput = data.hourlyThroughput; // units/hour\n\n// Optimal targets\nconst optimalSpeed = 45; // m/min\nconst maxTemp = 70; // Celsius\nconst maxVibration = 5; // Hz\nconst targetThroughput = 1000; // units/hour\n\n// Analysis and decision making\nlet decision = {\n  currentStatus: 'normal',\n  action: 'monitor',\n  newSpeed: speed,\n  priority: 'low',\n  reason: 'All parameters normal',\n  expectedImprovement: 0\n};\n\n// Critical checks first\nif (temperature > maxTemp) {\n  decision = {\n    currentStatus: 'critical',\n    action: 'reduce_speed',\n    newSpeed: Math.max(20, speed - 10),\n    priority: 'high',\n    reason: `Motor overheating: ${temperature}°C > ${maxTemp}°C`,\n    expectedImprovement: 'Prevent motor damage'\n  };\n}\nelse if (vibration > maxVibration) {\n  decision = {\n    currentStatus: 'warning',\n    action: 'reduce_speed',\n    newSpeed: Math.max(25, speed - 5),\n    priority: 'medium',\n    reason: `Excessive vibration: ${vibration}Hz > ${maxVibration}Hz`,\n    expectedImprovement: 'Reduce wear and noise'\n  };\n}\n// Optimization opportunities\nelse if (throughput < targetThroughput && speed < optimalSpeed && temperature < 60) {\n  decision = {\n    currentStatus: 'optimize',\n    action: 'increase_speed',\n    newSpeed: Math.min(optimalSpeed, speed + 5),\n    priority: 'medium',\n    reason: `Low throughput: ${throughput} < ${targetThroughput}. Can safely increase speed.`,\n    expectedImprovement: `+${Math.round((decision.newSpeed - speed) / speed * throughput)} units/hour`\n  };\n}\nelse if (speed > optimalSpeed && throughput >= targetThroughput) {\n  decision = {\n    currentStatus: 'optimize',\n    action: 'reduce_speed',\n    newSpeed: optimalSpeed,\n    priority: 'low',\n    reason: 'Speed higher than needed, can save energy',\n    expectedImprovement: `Save ~${Math.round((speed - optimalSpeed) * 2)}% energy`\n  };\n}\n\n// Add timestamp and equipment info\ndecision.timestamp = new Date().toISOString();\ndecision.equipmentId = 'CONVEYOR-BELT-01';\ndecision.currentMetrics = {\n  speed: speed,\n  temperature: temperature,\n  vibration: vibration,\n  throughput: throughput\n};\n\nreturn { json: decision };\n\n// Add performance summary for email\nconst performanceSummary = {\n  // Original AI analysis\n  analysis: decision,\n  \n  // Email template fields\n  date: new Date().toISOString().split('T')[0],\n  totalActions: 1,\n  energySavedKwh: decision.action === 'reduce_speed' ? \n    Math.round((decision.currentMetrics.speed - decision.newSpeed) * 0.5 * 100) / 100 : 0,\n  costSavings: decision.action === 'reduce_speed' ? \n    Math.round((decision.currentMetrics.speed - decision.newSpeed) * 0.5 * 0.12 * 100) / 100 : 0,\n  throughputIncrease: decision.action === 'increase_speed' ? \n    Math.round((decision.newSpeed - decision.currentMetrics.speed) * 20) : 0,\n  issuesPrevented: decision.priority === 'high' || decision.priority === 'medium' ? 1 : 0,\n  systemEfficiency: decision.currentStatus === 'normal' ? 'Optimal' : \n                   decision.currentStatus === 'optimize' ? 'Optimizing' : 'Issue Detected'\n};\n\nreturn { json: performanceSummary };\n"
+      },
+      "id": "fffb372b-22ce-4fda-a9f7-1448de701e64",
+      "name": "Analyze & Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "needs-action",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "monitor",
+              "operator": {
+                "type": "string",
+                "operation": "notEqual"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e18ae5e2-6642-4bb9-a0c2-8c723e413344",
+      "name": "Action Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -860,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.factory-control.com/conveyor/belt-01/speed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"newSpeed\": {{ $json.newSpeed }},\n  \"reason\": \"{{ $json.reason }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"automatedBy\": \"n8n_optimization_system\",\n  \"timestamp\": \"{{ $json.timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "ca0a86ce-8a9e-4a42-8197-195b7463cf76",
+      "name": "Adjust Conveyor Speed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -560,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-critical",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e87b9319-5239-4afa-9662-6feb761d6fda",
+      "name": "Critical Issue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate performance improvements and savings\nconst logData = $input.all();\n\n// Get today's data (last 24 hours)\nconst today = new Date();\nconst yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);\n\nconst todaysActions = logData.filter(item => {\n  const actionTime = new Date(item.json.timestamp);\n  return actionTime >= yesterday;\n});\n\n// Calculate improvements\nlet energySaved = 0;\nlet throughputImproved = 0;\nlet issuesPrevented = 0;\n\ntodaysActions.forEach(action => {\n  const speedChange = action.json.new_speed - action.json.old_speed;\n  \n  // Energy savings from speed reductions\n  if (speedChange < 0) {\n    energySaved += Math.abs(speedChange) * 0.5; // kWh per m/min reduction\n  }\n  \n  // Throughput improvements from speed increases\n  if (speedChange > 0 && action.json.action === 'increase_speed') {\n    throughputImproved += speedChange * 20; // estimated units per hour\n  }\n  \n  // Count prevented issues\n  if (action.json.priority === 'high' || action.json.priority === 'medium') {\n    issuesPrevented++;\n  }\n});\n\nconst summary = {\n  date: today.toISOString().split('T')[0],\n  totalActions: todaysActions.length,\n  energySavedKwh: Math.round(energySaved * 100) / 100,\n  costSavings: Math.round(energySaved * 0.12 * 100) / 100, // $0.12 per kWh\n  throughputIncrease: throughputImproved,\n  issuesPrevented: issuesPrevented,\n  systemEfficiency: todaysActions.length > 0 ? 'Active Optimization' : 'Stable Operation'\n};\n\nreturn { json: summary };"
+      },
+      "id": "71870dfc-d534-4db8-928d-ab19a4e7df60",
+      "name": "Calculate Daily Improvements",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -540,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 8
+            }
+          ]
+        }
+      },
+      "id": "7c57915d-de64-47b8-86a5-046ed45747c3",
+      "name": "Daily Report at 8 AM",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -1520,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/conveyor-data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1400,
+        60
+      ],
+      "id": "bcde2018-131f-403f-9d6b-dda3df0ff23d",
+      "name": "Webhook",
+      "webhookId": "b691f7de-19dc-4936-95b9-785416d80964"
+    },
+    {
+      "parameters": {
+        "fromEmail": "psevolutionth@gmail.com",
+        "toEmail": "pasidthdr@gmail.com",
+        "subject": "Daily Conveyor Optimization Report - {{ $today.toISODate() }}",
+        "html": "=<h2>🏭 Daily Conveyor Performance Report</h2>\n<p><strong>Date:</strong> {{$json.date}}</p>\n<p><strong>Equipment:</strong> CONVEYOR-BELT-01</p>\n\n<h3>📊 Performance Summary</h3>\n<ul>\n<li><strong>Total Actions:</strong> {{$json.totalActions}}</li>\n<li><strong>Energy Saved:</strong> {{$json.energySavedKwh}} kWh</li>\n<li><strong>Cost Savings:</strong> ${{$json.costSavings}}</li>\n<li><strong>Throughput Increase:</strong> {{$json.throughputIncrease}} units/hour</li>\n<li><strong>Issues Prevented:</strong> {{$json.issuesPrevented}}</li>\n<li><strong>System Status:</strong> {{$json.systemEfficiency}}</li>\n</ul>\n\n<p>Report generated automatically by n8n workflow.</p>",
+        "options": {}
+      },
+      "id": "856cb8e1-1650-4107-8f21-12aff4ca9c8d",
+      "name": "Send Daily Report1",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -140,
+        240
+      ],
+      "webhookId": "60e1f4a5-62aa-4889-bb98-bfba47b9656a",
+      "credentials": {
+        "smtp": {
+          "id": "CtfgslUefoeEONBq",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "psevolutionth@gmail.com",
+        "toEmail": "pasidthdr@gmail.com",
+        "subject": "Daily Conveyor Optimization Report - {{ $today.toISODate() }}",
+        "html": "=<h2>🏭 Conveyor Belt AI Analysis Report</h2>\n<p><strong>Date:</strong> {{$json.timestamp}}</p>\n<p><strong>Equipment:</strong> {{$json.equipmentId}}</p>\n\n<h3>📊 Current Status Analysis</h3>\n<ul>\n<li><strong>System Status:</strong> {{$json.currentStatus}}</li>\n<li><strong>Recommended Action:</strong> {{$json.action}}</li>\n<li><strong>Priority Level:</strong> {{$json.priority}}</li>\n<li><strong>Analysis Reason:</strong> {{$json.reason}}</li>\n<li><strong>Expected Improvement:</strong> {{$json.expectedImprovement}}</li>\n</ul>\n\n<h3>🔧 Speed Adjustment</h3>\n<ul>\n<li><strong>Current Speed:</strong> {{$json.currentMetrics.speed}} m/min</li>\n<li><strong>Recommended Speed:</strong> {{$json.newSpeed}} m/min</li>\n<li><strong>Temperature:</strong> {{$json.currentMetrics.temperature}}°C</li>\n<li><strong>Vibration:</strong> {{$json.currentMetrics.vibration}} Hz</li>\n<li><strong>Throughput:</strong> {{$json.currentMetrics.throughput}} units/hour</li>\n</ul>\n\n<p>Analysis generated automatically by AI monitoring system.</p>",
+        "options": {}
+      },
+      "id": "0ef642de-ef91-478f-8aa2-ae7d7dbc0dad",
+      "name": "Send Operation Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -100,
+        80
+      ],
+      "webhookId": "60e1f4a5-62aa-4889-bb98-bfba47b9656a",
+      "credentials": {
+        "smtp": {
+          "id": "CtfgslUefoeEONBq",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Analyze & Decide": {
+      "main": [
+        [
+          {
+            "node": "Action Needed?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Operation Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Needed?": {
+      "main": [
+        [
+          {
+            "node": "Adjust Conveyor Speed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adjust Conveyor Speed": {
+      "main": [
+        [
+          {
+            "node": "Critical Issue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critical Issue?": {
+      "main": [
+        [
+          {
+            "node": "Send Operation Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Daily Improvements": {
+      "main": [
+        [
+          {
+            "node": "Send Daily Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Report at 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Calculate Daily Improvements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Analyze & Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7bf2de80-4f94-4655-acf8-23a8d43d0e71",
+  "meta": {
+    "instanceId": "8850f5daf830d04823c38a90760918ec24564b7c0612dce2931b5f53ee3dcedd"
+  },
+  "id": "15zM6eFZ8Ms1aSre",
+  "tags": []
+}
